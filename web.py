@@ -16,7 +16,7 @@ def hello_world():
 
 @app.route('/auto')
 def auto():
-    return 'Current data=' + str(data)
+    return 'Current data = ' + str(data)
 
 
 @app.route('/turn_on_off')
@@ -51,6 +51,7 @@ def readingThread(ser):
             led_status = 'BLINKING'
         else:
             update_data(line)
+
 
 def controlThread(ser):
     global is_stopping
@@ -95,4 +96,4 @@ if __name__ == "__main__":
     h_control_thread.join()
 
     h_serial.close()
-    print("APP IS CLOSED\n")
+    print("WEB IS CLOSED\n")
