@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="static/style.css">  <!--Bỏ file css vào static folder vì flask sẽ tự động tìm file css trong static folder -->
+    <title>Dashboard</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            setInterval(function () {
+                $("#autodiv").load('auto') // Load data from /auto endpoint
+            }, 1000);
+
+            setInterval(function () {
+                $("#led_status").load('led_status') // Load data from /led_status endpoint
+            }, 1000);
+
+            $("#turn_on_off").click(function () {
+                $.get('/turn_on_off', function (data) {
+                    alert(data.led);
+                });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <h1>Light Sensor Data</h1>
+    
+    <div id="data">
+        <div id="autodiv">--</div> <!-- This div will be updated with data from /auto -->
+        <div id="led_status">--</div> <!-- This div will be updated with data from /led_status -->
+    </div>
+    
+    <h1>Control Light</h1>
+    <button id="turn_on_off">Turn ON/OFF</button>
+    
+</body>
+</html>
