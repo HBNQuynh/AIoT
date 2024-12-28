@@ -24,6 +24,9 @@ global h_serial
 h_serial = None
 global h_reading_thread
 h_reading_thread = None
+global h_control_thread
+h_control_thread = None
+
 
 cmd_queue = queue.Queue()
 
@@ -32,7 +35,7 @@ sensor_view = pn.indicators.Number(
     name="Cảm biến ánh sáng", 
     value=data, 
     format="{value} lux", 
-    colors=[(50, "green"), (300, "red")]
+    colors=[(50, "green"), (2000, "red")]
 )
 
 led_status_view = pn.widgets.StaticText(
@@ -52,6 +55,7 @@ toggle_led_button = pn.widgets.Button(
 def update_ui():
     sensor_view.value = data
     led_status_view.value = led_status
+    print(f"Cập nhật giao diện: data={data}, led_status={led_status}")
 
 # Hàm bật/tắt đèn trên web
 def toggle_led(event):
@@ -106,7 +110,7 @@ def chat_with_gpt(user_input):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Bạn là một trợ lý AI giúp điều khiển đèn LED IoT. Bạn có thể bật, tắt và kiểm tra trạng thái đèn LED."},
+            {"role": "system", "content": "Bạn là một trợ lý AI giúp điều khiển đèn LED IoT. Bạn có thể bật, tắt và kiểm tra trạng thái đèn LED. Nếu trời sáng quá, hãy tắt đèn, còn nếu trời tối, hãy bật đèn lên nhé!"},
             {"role": "user", "content": user_input}
         ],
         functions=[
@@ -126,8 +130,9 @@ def chat_with_gpt(user_input):
         function_call="auto"
     )
     
-    response_message = response.choices[0].message
+    return response.choices[0].message
     
+def handle_response(response_message):
     if response_message.function_call:
         function_name = response_message.function_call.name
         
@@ -148,7 +153,8 @@ def chat_with_gpt(user_input):
 # 1️⃣ Cấu hình Chatbot
 # ==========================
 async def get_response(contents, user, instance):
-    response = chat_with_gpt(contents)
+    response_msg = chat_with_gpt(contents)
+    response = handle_response(response_msg)
 
     for i in range(len(response)):
         yield response[:i+1]
@@ -202,36 +208,41 @@ def handle_speech_results(results):
         return pn.pane.Str("Không có kết quả từ giọng nói.", width=200, height=100)
 
 
-# Thread
+# Thread đọc dữ liệu từ cổng COM
 def readingThread(ser):
-    global is_stopping
-    global data
-    global led_status
+    global is_stopping, data, led_status
 
     while not is_stopping:
-        line = ser.readline().strip()
+        if ser and ser.is_open:
+            try:
+                line = ser.readline().strip()
 
-        if line == b'ON':
-            led_status = 'ON'
-        elif line == b'OFF':
-            led_status = 'OFF'
-        elif line == b'BLINK':
-            led_status = 'BLINKING'
-        else:
-            update_data(line)
-        
+                if line == b'ON':
+                    led_status = 'ON'
+                elif line == b'OFF':
+                    led_status = 'OFF'
+                elif line == b'BLINK':
+                    led_status = 'BLINKING'
+                else:
+                    update_data(line)
+            except Exception as e:
+                print(f"Lỗi trong readingThread: {e}")
 
-
+# Thread điều khiển cổng COM
 def controlThread(ser):
     global is_stopping
 
     while not is_stopping:
-        if cmd_queue.empty():
-            time.sleep(1)
-        else:
-            cmd = cmd_queue.get()
-            print(cmd)
-            ser.write(cmd.encode())
+        if ser and ser.is_open:
+            try:
+                if cmd_queue.empty():
+                    time.sleep(1)
+                else:
+                    cmd = cmd_queue.get()
+                    print(cmd)
+                    ser.write(cmd.encode())
+            except Exception as e:
+                print(f"Lỗi trong controlThread: {e}")
 
 
 
@@ -243,17 +254,39 @@ def update_data(s):
     except ValueError:
         return False
 
-
 # Hàm khởi tạo cổng COM
 def initialize_serial():
     global h_serial
     if h_serial and h_serial.is_open:
         h_serial.close()
     try:
-        h_serial = serial.Serial('COM8', 9600, timeout=1)
+        h_serial = serial.Serial('COM7', 115200, timeout=1)
     except serial.SerialException as e:
         print(f"Lỗi khi khởi tạo cổng COM: {e}")
         h_serial = None
+
+
+# Hàm đặt lại trạng thái
+def reset_state():
+    global data, led_status, is_stopping, h_serial, h_reading_thread, h_control_thread
+
+    # Đặt trạng thái mặc định
+    data = 0.0
+    led_status = 'OFF'
+    is_stopping = False
+
+    # Khởi tạo lại cổng COM
+    initialize_serial()
+
+    # Khởi động lại các luồng
+    if not h_reading_thread or not h_reading_thread.is_alive():
+        h_reading_thread = threading.Thread(target=readingThread, args=(h_serial,))
+        h_reading_thread.start()
+
+    if not h_control_thread or not h_control_thread.is_alive():
+        h_control_thread = threading.Thread(target=controlThread, args=(h_serial,))
+        h_control_thread.start()
+
 
 # Hàm dọn dẹp tài nguyên khi thoát
 def cleanup():
@@ -271,14 +304,22 @@ def cleanup():
 # Đăng ký cleanup khi thoát
 atexit.register(cleanup)
 
-# Khởi tạo cổng COM
-initialize_serial()
+import signal
 
-# Tạo và chạy các luồng
-h_reading_thread = threading.Thread(target=readingThread, args=(h_serial,))
-h_control_thread = threading.Thread(target=controlThread, args=(h_serial,))
-h_reading_thread.start()
-h_control_thread.start()
+# Hàm xử lý tín hiệu
+def signal_handler(sig, frame):
+    print("\nTín hiệu SIGINT nhận được, đang dọn dẹp...")
+    cleanup()
+    print("Thoát chương trình.")
+    exit(0)  # Thoát chương trình
+
+# Đăng ký hàm xử lý tín hiệu SIGINT (Ctrl+C)
+signal.signal(signal.SIGINT, signal_handler)
+
+
+# Khởi tạo trạng thái ban đầu
+reset_state()
+
 
 # Tạo layout với Panel
 dashboard = pn.template.FastListTemplate(
