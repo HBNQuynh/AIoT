@@ -158,6 +158,7 @@ import panel as pn
 import asyncio
 import json
 import os
+from datetime import datetime #lấy thời gian thực
 
 pn.extension()
 
@@ -184,10 +185,24 @@ current_chat_id = list(chat_histories.keys())[0] if chat_histories else "Chat 1"
 if not chat_histories:
     chat_histories[current_chat_id] = []
 
+# Hàm đổi tên chat_id trong lịch sử hội thoại
+def rename_chat_id(old_id, new_id):
+    if old_id in chat_histories and new_id not in chat_histories:
+        chat_histories[new_id] = chat_histories.pop(old_id)
+        save_chat_histories()
+
+
 # ==========================
 # 2. Cấu hình Chatbot
 # ==========================
 async def get_response(contents, user, instance):
+    global current_chat_id
+
+    # Đổi tên chat_id cho dễ phân biệt các đoạn chat
+    if "Chat" in current_chat_id and current_chat_id != contents: 
+        rename_chat_id(current_chat_id, contents)
+        current_chat_id = contents
+
     if "xin chào" in contents.lower():
         response = "Xin chào"
     else:
@@ -204,7 +219,12 @@ async def get_response(contents, user, instance):
     # Lưu đoạn chat vào lịch sử
     if current_chat_id not in chat_histories:
         chat_histories[current_chat_id] = []
-    chat_histories[current_chat_id].append({"user": contents, "bot": response})
+
+    chat_histories[current_chat_id].append({
+        "user": contents,
+        "bot": response,
+        "timestamp": datetime.now().isoformat()
+    })
 
     # Lưu vào tệp JSON
     save_chat_histories()
@@ -213,13 +233,17 @@ async def get_response(contents, user, instance):
 # Khởi tạo Chat Interface
 chat_bot = pn.chat.ChatInterface(
     callback=get_response, 
-    max_height=800,
+    max_height=700,
     show_clear=False
 )
 
 # Tải nội dung hội thoại hiện tại
-for msg in chat_histories.get(current_chat_id, []):
-    chat_bot.send(f"**User**: {msg['user']}\n**Bot**: {msg['bot']}", user="History", respond=False)
+for msg in chat_histories[current_chat_id]:
+    timestamp = datetime.fromisoformat(msg['timestamp']) if 'timestamp' in msg else datetime.now()
+    chat_bot.send(msg['user'], user="User", respond=False, timestamp=timestamp)
+    chat_bot.send(msg['bot'], user="Assistant", respond=False, timestamp=timestamp)
+
+
 
 # ==========================
 # 3. Quản lý danh sách chat
@@ -238,13 +262,20 @@ def load_chat(event):
         current_chat_id = selected_chat
         chat_bot.clear()
         for msg in chat_histories[current_chat_id]:
-            chat_bot.send(f"**User**: {msg['user']}\n**Bot**: {msg['bot']}", user="History", respond=False)
+            timestamp = datetime.fromisoformat(msg['timestamp']) if 'timestamp' in msg else datetime.now()
+            chat_bot.send(msg['user'], user="User", respond=False, timestamp=timestamp)
+            chat_bot.send(msg['bot'], user="Assistant", respond=False, timestamp=timestamp)
+
+
 
 chat_list.param.watch(load_chat, 'value')
 
 # Bắt đầu một cuộc hội thoại mới
 def start_new_chat(event):
     global current_chat_id
+
+    if chat_histories[current_chat_id] == []:
+        return
     new_chat_id = f"Chat {len(chat_histories) + 1}"
     chat_histories[new_chat_id] = []
     current_chat_id = new_chat_id
@@ -252,8 +283,26 @@ def start_new_chat(event):
     update_chat_list()
     save_chat_histories()
 
-new_chat_button = pn.widgets.Button(name="🆕 Bắt đầu cuộc chat mới", button_type="primary")
+# Nút bắt đoạn chat mới
+new_chat_button = pn.widgets.Button(name="🆕 New chat", button_type="primary")
 new_chat_button.on_click(start_new_chat)
+
+# Hàm xóa đoạn chat hiện tại
+def delete_current_chat(event):
+    global current_chat_id
+    if current_chat_id in chat_histories:
+        del chat_histories[current_chat_id]
+        save_chat_histories()
+        current_chat_id = list(chat_histories.keys())[0] if chat_histories else "Chat 1"
+        if not chat_histories:
+            chat_histories[current_chat_id] = []
+        chat_bot.clear()
+        update_chat_list()
+
+# Nút xóa đoạn chat hiện tại
+delete_chat_button = pn.widgets.Button(name="🗑️ Xóa đoạn chat hiện tại", button_type="danger")
+delete_chat_button.on_click(delete_current_chat)
+
 
 # ==========================
 # 4. Cấu hình Speech-to-Text và Text-to-Speech
@@ -297,7 +346,9 @@ sidebar = pn.Column(
     pn.pane.Markdown("## **Danh sách các cuộc hội thoại**"),
     chat_list,
     new_chat_button,
+    delete_chat_button,
     width=300,
+    height=700,
     css_classes=["sidebar"]
 )
 

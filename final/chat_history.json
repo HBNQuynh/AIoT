@@ -1,0 +1,38 @@
+{
+    "Xin chào": [
+        {
+            "user": "Xin chào",
+            "bot": "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?",
+            "timestamp": "2024-12-30T03:18:58.077604"
+        },
+        {
+            "user": "bây giờ ở Nhật đang là mấy giờ",
+            "bot": "Hiện tại, tôi không thể truy cập thông tin thời gian thực để cung cấp giờ chính xác ở Nhật Bản. Tuy nhiên, bạn có thể kiểm tra giờ ở Nhật bằng cách tìm trên internet hoặc bằng cách sử dụng một ứng dụng đồng hồ. Nhật Bản hoạt động theo múi giờ Japan Standard Time (JST), tức là UTC+9.",
+            "timestamp": "2024-12-30T03:19:26.608431"
+        }
+    ],
+    "Kể một câu chuyện cười": [
+        {
+            "user": "Kể một câu chuyện cười",
+            "bot": "Một ngày nọ, một con gà và một con vịt đi dạo cùng nhau. Khi thấy một cái hồ, con gà nói:\n\n- \"Chúng ta hãy bơi đi!\"\n\nCon vịt nhún vai và đáp:\n\n- \"Tại sao tôi phải bơi? Tôi đã có sẵn đôi chân để bơi rồi!\"\n\nCon gà nhìn quanh rồi nói:\n\n- \"Nhưng tôi thì không thể bơi, tôi có đôi chân chỉ để đi bộ!\"\n\nCon vịt cười và nói:\n\n- \"Vậy thì bạn hãy ở lại bờ và để tôi bơi một mình nhé!\"\n\nCon gà thở dài và bảo:\n\n- \"Hừ, vậy thì tôi sẽ đi tìm một cái hồ khác, nơi mà tôi có thể 'gà bơi' một mình!\"\n\nThế là con gà rời đi, lịch sử chuyển sang mục \"truyền thuyết về gà biết bơi!\" 😄",
+            "timestamp": "2024-12-30T03:20:27.556163"
+        }
+    ],
+    "Trời tối quá bạn ơi": [
+        {
+            "user": "Trời tối quá bạn ơi",
+            "bot": "Đèn đã được bật.",
+            "timestamp": "2024-12-30T04:13:07.545656"
+        },
+        {
+            "user": "bây giờ trời sáng rồi",
+            "bot": "Đèn đã được tắt.",
+            "timestamp": "2024-12-30T04:13:18.185573"
+        },
+        {
+            "user": "tắt đèn giúp tôi được không",
+            "bot": "Đèn đã được tắt.",
+            "timestamp": "2024-12-30T04:13:30.533645"
+        }
+    ]
+}
