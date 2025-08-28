@@ -1,0 +1,7 @@
+flask
+panel
+pandas
+numpy
+matplotlib
+pyserial
+openai
