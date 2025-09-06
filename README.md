@@ -76,6 +76,6 @@ Here you can:
 * Monitor live light sensor data.
 * Toggle the LED manually or let the system run in auto mode.
 * Interact with the AI-powered chatbot to control lights or check system status (supports **Speech-to-Text** & **Text-to-Speech**).
-* Manage multiple chat sessions with logs stored in `chat_history.json`.
+* Manage multiple chat sessions
 
 ✨ The **final version** is the complete project. Please run everything inside the `final/` folder instead of `midterm/`.
